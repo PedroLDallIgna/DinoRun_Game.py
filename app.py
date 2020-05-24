@@ -21,6 +21,7 @@ def buttons(msg, x, y, w, h, color, action=None):
 
     if ((x + w) > menus.mouse_pos[0] > x) and ((y + h) > menus.mouse_pos[1] > y):
         pygame.draw.rect(app._display_surf, color, (x, y, w, h))
+        app._display_surf.blit(pygame.image.load("assets/button_gameover.png"))
 
         if menus.mouse_isPressed[0] == 1 and action != None:
             action()
@@ -85,52 +86,48 @@ class App(object):
                 self.on_event(event)
             
             run = []
+            ptera_fly = ['ptera_up', 'ptera_up', 'ptera_up', 'ptera_up', 'ptera_up', 'ptera_down', 'ptera_down', 'ptera_down', 'ptera_down', 'ptera_down']
+
             if dino.isDown:
-                run = [dino.block_dimensions['down_step_right'], dino.block_dimensions['down_step_right'], dino.block_dimensions['down_step_right'], dino.block_dimensions['down_step_right'], dino.block_dimensions['down_step_left'], dino.block_dimensions['down_step_left'], dino.block_dimensions['down_step_left'], dino.block_dimensions['down_step_left']]
-            elif dino.ascend or dino.descend:
-                run = [dino.block_dimensions['main_image']]
+                run = [dino.images['down_step_right'], dino.images['down_step_right'], dino.images['down_step_right'], dino.images['down_step_right'], dino.images['down_step_right'], dino.images['down_step_left'], dino.images['down_step_left'], dino.images['down_step_left'], dino.images['down_step_left'], dino.images['down_step_left']]
+            elif dino.isJumping:
+                run = [dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image']]
             else:
-                run = [dino.block_dimensions['step_right'], dino.block_dimensions['step_right'], dino.block_dimensions['step_right'], dino.block_dimensions['step_right'], dino.block_dimensions['step_left'], dino.block_dimensions['step_left'], dino.block_dimensions['step_left'], dino.block_dimensions['step_left']]
+                run = [dino.images['step_right'], dino.images['step_right'], dino.images['step_right'], dino.images['step_right'], dino.images['step_right'], dino.images['step_left'], dino.images['step_left'], dino.images['step_left'], dino.images['step_left'], dino.images['step_left']]
 
 
-            for img in run:
+            for img in range(0, 8):
                 
-                if (dino.isJumping == True) and (dino.pos[1] > -30):
+                if (dino.isJumping == True):
                     dino.pos[1] -= self.speed
-                    self.speed -= 0.4
-                    dino.ascend = True
-                else:
-                    dino.ascend = False
-                
-                if (dino.pos[1] < 150) and (dino.ascend == False):
-                    if (dino.pos[1] % 1 != 0):
-                        math.floor(dino.pos[1])
-                    dino.pos[1] += settings.gravity
-                    settings.gravity += settings.acceleration
-                    dino.descend = True
-                    # dino.isJumping = False
-                    # if (dino.pos[1] > 50) and (dino.isJumping == False):
-                    #     dino.pos[1] = 150
+                    self.speed -= settings.gravity
 
-                if not dino.ascend:
+                if (dino.pos[1] == 0.0):
+                    settings.gravity += settings.acceleration
+
+                
+                if (dino.pos[1] == 150.0):
                     dino.isJumping = False
                     self.speed = dino.jumpSpeed
-                
-                if (dino.pos[1] > 149) and (dino.pos[1] < 151):
-                    dino.descend = False
-                    dino.pos[1] = 150
                     settings.gravity = 1
 
                 self.on_loop()
-                dino.draw_dino(img)
+                dino.draw_dino(run[img][0])
+
+                # if ((dino.pos[0] + img[1][0]) == obstacles.x):
+                #     menus.game_over()
+
                 score = message_display("SCORE: " + str(math.floor(self.score)), 'agencyfb', 25, 4)
-                obstacles.obstacles(settings.colors['BLACK'])
+                if (obstacles.randomic_choice == 'ptera'):
+                    obstacles.ptera(ptera_fly[img])
+                else:
+                    obstacles.obstacles()
                 obstacles.x -= settings.speed
                 self.score += settings.score_acceleration
                 settings.score_acceleration += 0.0001
                 # pygame.draw.rect(self._display_surf, dino.dino_color, dino.images['main_image'])
-                if (obstacles.x <= -200):
-                    obstacles.x = 1100
+                if (obstacles.x <= -100):
+                    obstacles.x = 905
                     settings.speed += settings.acceleration
                     obstacles.randomic_choice = random.choice(['small_cactus', 'medium_cactus', 'many_cactus', 'ptera'])
                 self.on_render()
@@ -159,7 +156,7 @@ class Menus(object):
             
             # app._display_surf.fill(settings.colors['WHITE'])
             app.on_loop()
-            app._display_surf.blit(dino.block_dimensions['main_image'], (dino.pos[0], dino.pos[1]))
+            app._display_surf.blit(dino.images['main_image'][0], (dino.pos[0], dino.pos[1]))
 
             largeText = message_display(settings._game_name, 'agencyfb', 100, 2)
             smallText = message_display('Press SPACE', 'agencyfb', 30, 1.3)
@@ -175,6 +172,17 @@ class Menus(object):
 
             # pygame.display.update()
             # settings.clock.tick(15)
+            app.on_render()
+
+
+    def game_over(self):
+        message_display("GAME OVER", 'agencyfb', 100, 2)
+
+        while True:
+            for event in pygame.event.get():
+                if (event.type == pygame.QUIT):
+                    app.on_cleanup()
+
             app.on_render()
 
 
@@ -202,14 +210,14 @@ class Dino(object):
 
     def __init__(self):
         self.settings = Settings()
-        self.block_dimensions = {
-            'main_image': pygame.image.load("assets/dino.png"),#(50, 80)
+        self.images = {
+            'main_image': [pygame.image.load("assets/dino.png"), (88, 94)],
             # 'down_image': pygame.image.load("assets/dino_down_right.png"),
-            'step_right': pygame.image.load("assets/dino_up_right.png"),
-            'step_left': pygame.image.load("assets/dino_up_left.png"),
-            'down_step_right': pygame.image.load("assets/dino_down_right.png"),
-            'down_step_left': pygame.image.load("assets/dino_down_left.png"),
-            'died': ["assets/dino_died.png", (00, 00)]
+            'step_right': [pygame.image.load("assets/dino_up_right.png"), (88, 94)],
+            'step_left': [pygame.image.load("assets/dino_up_left.png"), (88, 94)],
+            'down_step_right': [pygame.image.load("assets/dino_down_right.png"), (118, 60)],
+            'down_step_left': [pygame.image.load("assets/dino_down_left.png"), (118, 60)]
+            # 'died': ["assets/dino_died.png", (00, 00)]
         }
         self.pos = [100, 150]
         self.dino_size = None
@@ -219,7 +227,7 @@ class Dino(object):
         self.descend = False
         self.isDown = False
         self.isUp = False
-        self.jumpSpeed = 12
+        self.jumpSpeed = 16
 
     # def change_image(self):
     #     if (self.app.dino_isStopped == True):
@@ -265,7 +273,7 @@ class Dino(object):
 
 
     def draw_dino(self, img):
-        if (img == self.block_dimensions['down_step_right']) or (img == self.block_dimensions['down_step_left']):
+        if (img == self.images['down_step_right'][0]) or (img == self.images['down_step_left'][0]):
             app._display_surf.blit(img, (self.pos[0], self.pos[1] + 34))
         else:
             app._display_surf.blit(img, (self.pos[0], self.pos[1]))
@@ -278,17 +286,32 @@ class Obstacles(object):
             'small_cactus': (30, 15, 205),
             'medium_cactus': (38, 23, 197),
             'many_cactus': (45, 38, 190),
-            'ptera': (27, 30)
+            'ptera_up': [pygame.image.load("assets/ptera_up.png"), (96, 60)],
+            'ptera_down': [pygame.image.load('assets/ptera_down.png'), (92, 68)]
         }
         self.x = 905
-        self.y_ptera = 150
+        self.y_ptera = 116
         self.randomic_choice = random.choice(['small_cactus', 'medium_cactus', 'many_cactus', 'ptera'])
 
-    def obstacles(self, color):
-        if (self.randomic_choice == 'ptera'):
-            pygame.draw.rect(app._display_surf, color, [self.x, self.y_ptera, self.obst[self.randomic_choice][1], self.obst[self.randomic_choice][0]])
+    
+    def ptera(self, ptera):
+        if (ptera == 'ptera_up'):
+            app._display_surf.blit(self.obst[ptera][0], (self.x, self.y_ptera))
         else:
-            pygame.draw.rect(app._display_surf, color, [self.x, self.obst[self.randomic_choice][2], self.obst[self.randomic_choice][1], self.obst[self.randomic_choice][0]])
+            app._display_surf.blit(self.obst[ptera][0], (self.x, self.y_ptera + 20))
+
+    # def cactus(self, cactus):
+
+
+    def obstacles(self):
+        # if (self.randomic_choice == 'ptera'):
+        #     for thing in ['ptera_up', 'ptera_up', 'ptera_up', 'ptera_up', 'ptera_down', 'ptera_down', 'ptera_down', 'ptera_down']:
+        #     # else:
+        #     #     app._display_surf.blit(self.obst['ptera_down'][0], (self.x, self.y_ptera))
+        #     # app._display_surf.blit(self.obst['ptera_up'], (self.x, self.y_ptera))
+        #     # pygame.draw.rect(app._display_surf, color, [self.x, self.y_ptera, self.obst[self.randomic_choice][1], self.obst[self.randomic_choice][0]])
+        # else:
+        pygame.draw.rect(app._display_surf, settings.colors['BLACK'], [self.x, self.obst[self.randomic_choice][2], self.obst[self.randomic_choice][1], self.obst[self.randomic_choice][0]])
 
 
 app = App()
