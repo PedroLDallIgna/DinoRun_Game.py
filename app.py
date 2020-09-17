@@ -15,23 +15,21 @@ def message_display(text, font, font_size, h):
     app._display_surf.blit(TextSurf, TextRect)
 
 
-def buttons(msg, x, y, w, h, color, action=None):
+def buttons(img, w, h, buttonW, buttonH, action=None):
     menus.mouse_pos = pygame.mouse.get_pos()
     menus.mouse_isPressed = pygame.mouse.get_pressed()
+    position = ((w / 2) - (buttonW / 2), (h / 1.5) - (buttonH / 2))
+    app._display_surf.blit(pygame.image.load(img), position)
 
-    if ((x + w) > menus.mouse_pos[0] > x) and ((y + h) > menus.mouse_pos[1] > y):
-        pygame.draw.rect(app._display_surf, color, (x, y, w, h))
-        app._display_surf.blit(pygame.image.load("assets/button_gameover.png"))
+    # if ((x + w) > menus.mouse_pos[0] > x) and ((y + h) > menus.mouse_pos[1] > y) and menus.mouse_isPressed[0] == 1 and action != None:
+    #     action()
 
-        if menus.mouse_isPressed[0] == 1 and action != None:
-            action()
-    else: 
-        pygame.draw.rect(app._display_surf, color, (x, y, w, h))
+    if ((position[0] + buttonW) > menus.mouse_pos[0] > position[0]) and ((position[1] + buttonH) > menus.mouse_pos[1] > position[1]) and menus.mouse_isPressed[0] == 1 and action != None:
+        action()
 
-    smallText = pygame.font.SysFont('agencyfb', 20, 'bold')
-    textSurf, textRect = app.text_objects(msg, smallText)
-    textRect.center = ((x + (w / 2)), (y + (h / 2)))
-    app._display_surf.blit(textSurf, textRect)
+    # smallText = pygame.font.SysFont('agencyfb', 20, 'bold')
+    # textSurf, textRect = app.text_objects(msg, smallText)
+    # app._display_surf.blit(textSurf, textRect)
 
 
 class App(object):
@@ -48,6 +46,8 @@ class App(object):
         self._game_name = pygame.display.set_caption(settings._game_name)
         if (menus.start_menu() == False):
             return True
+            # self.isRunning = True
+            # self.on_execute()
 
     def on_event(self, event):
         if (event.type == pygame.QUIT):
@@ -89,7 +89,9 @@ class App(object):
             ptera_fly = ['ptera_up', 'ptera_up', 'ptera_up', 'ptera_up', 'ptera_up', 'ptera_down', 'ptera_down', 'ptera_down', 'ptera_down', 'ptera_down']
 
             if dino.isDown:
-                run = [dino.images['down_step_right'], dino.images['down_step_right'], dino.images['down_step_right'], dino.images['down_step_right'], dino.images['down_step_right'], dino.images['down_step_left'], dino.images['down_step_left'], dino.images['down_step_left'], dino.images['down_step_left'], dino.images['down_step_left']]
+                [run.append(dino.images['down_step_right']) for i in range(5)]
+                [run.append(dino.images['down_step_left']) for i in range(5)]
+                #run = [dino.images['down_step_right'], dino.images['down_step_right'], dino.images['down_step_right'], dino.images['down_step_right'], dino.images['down_step_right'], dino.images['down_step_left'], dino.images['down_step_left'], dino.images['down_step_left'], dino.images['down_step_left'], dino.images['down_step_left']]
             elif dino.isJumping:
                 run = [dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image'], dino.images['main_image']]
             else:
@@ -114,20 +116,21 @@ class App(object):
                 self.on_loop()
                 dino.draw_dino(run[img][0])
 
-                # if ((dino.pos[0] + img[1][0]) == obstacles.x):
-                #     menus.game_over()
-
-                score = message_display("SCORE: " + str(math.floor(self.score)), 'agencyfb', 25, 4)
+                if ((dino.pos[0] + run[img][1][0]) == obstacles.x) and ((dino.pos[1] + run[img][1][1]) >= obstacles.y_ptera):
+                   menus.game_over()
+                
+                score = message_display("SCORE: " + str(int(round(self.score))), 'agencyfb', 25, 4)
                 if (obstacles.randomic_choice == 'ptera'):
                     obstacles.ptera(ptera_fly[img])
                 else:
                     obstacles.obstacles()
                 obstacles.x -= settings.speed
                 self.score += settings.score_acceleration
-                settings.score_acceleration += 0.0001
+                if (round(self.score) % 100 == 0):
+                    settings.score_acceleration += 0.002
                 # pygame.draw.rect(self._display_surf, dino.dino_color, dino.images['main_image'])
                 if (obstacles.x <= -100):
-                    obstacles.x = 905
+                    obstacles.x = 902
                     settings.speed += settings.acceleration
                     obstacles.randomic_choice = random.choice(['small_cactus', 'medium_cactus', 'many_cactus', 'ptera'])
                 self.on_render()
@@ -176,13 +179,20 @@ class Menus(object):
 
 
     def game_over(self):
-        message_display("GAME OVER", 'agencyfb', 100, 2)
+        message_display("GAME OVER", 'agencyfb', 80, 3)
 
         while True:
             for event in pygame.event.get():
                 if (event.type == pygame.QUIT):
                     app.on_cleanup()
-
+            
+            buttons(
+                "assets/button_gameover.png",
+                settings.width,
+                settings.height,
+                72, 64,
+                app.on_execute
+            )
             app.on_render()
 
 
@@ -201,8 +211,8 @@ class Settings(object):
         self.clock = pygame.time.Clock()
         self.FPS = 60
         self.speed = 8
-        self.score_acceleration = 0.001
-        self.acceleration = 0.25
+        self.score_acceleration = 0.025
+        self.acceleration = 0.1
         self.gravity = 1
 
 
