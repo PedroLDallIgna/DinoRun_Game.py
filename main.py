@@ -10,66 +10,68 @@ def text_objects(text, font):
     return textSurface, textSurface.get_rect()
 
 
-def message_display(text, font, font_size, h):
+def message_display(text, font, font_size, x, y):
     Text = pygame.font.Font(font, font_size)
     TextSurf, TextRect = text_objects(text, Text)
-    TextRect.center = ((settings.width / 2), (settings.height / h))
+    TextRect.center = ((settings.width / x), (settings.height / y))
     app._display_surf.blit(TextSurf, TextRect)
 
 
-def buttons(img, w, h, buttonW, buttonH):
+def buttons(img, buttonW, buttonH, x, y, condition, action=None):
     menus.mouse_pos = pygame.mouse.get_pos()
     menus.mouse_isPressed = pygame.mouse.get_pressed()
-    position = ((w / 2) - (buttonW / 2), (h / 1.5) - (buttonH / 2))
-    app._display_surf.blit(pygame.image.load(img), position)
+    position = (x - (buttonW / 2), y - (buttonH / 2))
+    app._display_surf.blit(img, position)
 
     if ((position[0] + buttonW) > menus.mouse_pos[0] > position[0]) and\
         ((position[1] + buttonH) > menus.mouse_pos[1] > position[1]) and\
         menus.mouse_isPressed[0] == 1:
-        app.try_again()
+        condition = True
+        action()
 
 
 class App(object):   ##criando a classe principal do jogo
 
     def __init__(self):
-        self.is_Running = False
-        self._display_surf = None
-        self._title = None
+        self.is_Running = False      ##variável do loop principal
+        self._display_surf = None    ##inicialmente o display tem valor nulo
+        self._title = None           ##o título também é nulo
         self.randomic_choice = random.choice(['small', 'medium', 'large'])
-        self.score = 0
-        
+        self.score = 0               ##variável responsável pela pontuação do jogador
 
-    def on_init(self):   ##módulo para incializar o pygame
-        try:   ##tentar iniciar o pygame
+    def on_init(self):               ##função para incializar o pygame
+        try:                         ##tentar iniciar o pygame
             pygame.init()
-        except:   ##em caso de excessão haverá o print abaixo
+        except:                      ##em caso de excessão haverá o print abaixo
             print("O módulo pygame não funcionou corretamente.")
-        self._display_surf = pygame.display.set_mode(settings.size)   ##definindo o tamanho da janela e a superfície
-        self._title = pygame.display.set_caption(settings._game_name)   ##definindo o título da janela
-        settings.mixer_init()
+        self._display_surf = pygame.display.set_mode(settings.size)     ##aqui define-se o tamanho da janela e a superfície
+        self._title = pygame.display.set_caption(settings._game_name)   ##e aqui define-se o título da janela, sobrepondo o valor nulo
 
-    def on_event(self, event):   ##módulo que capturará os inputs
-        if (event.type == pygame.QUIT):
-            self.on_cleanup()
+    def on_event(self, event):            ##função que capturará os inputs
+        if (event.type == pygame.QUIT):   ##se o usuário clicar no X
+            self.on_cleanup()             ##será chamada função on_cleanup()
 
-        if self.is_Running:
-            app.on_runningKeys(event)
-        elif menus.menu_isActive:
-            menus.on_menuKeys(event)
-        
-        return self.is_Running
+        if self.is_Running:               ##se a variável do loop for True, os inputs serão tratados
+            self.on_runningKeys(event)    ##nesta função da classe App
+        elif menus.menu_isActive:         ##se a variável que indica que um menu está ativo for True, os inputs
+            menus.on_menuKeys(event)      ##serão tratados nesta função da classe Menus
 
-    def on_runningKeys(self, event):
-        if (event.type == pygame.KEYDOWN):
+        return self.is_Running            ##a função retornará se o jogo está rodando
+
+    def on_runningKeys(self, event):                         ##quando a variável do loop é verdadeira, ela entra nesta função
+        if (event.type == pygame.KEYDOWN):                   ##que verificará se a tecla foi clicada(key down)
             if (event.key == pygame.K_UP) or\
-                (event.key == pygame.K_SPACE):
-                dino.is_Jumping = True
+                (event.key == pygame.K_SPACE):               ##sendo assim, se o usuário pressionar SPACE ou Pg.UP acontecerá:
+                pygame.mixer.init()                          ##carregando o método do pygame para sons
+                pygame.mixer.music.load("assets/jump.wav")   ##load do efeito sonoro do pulo
+                pygame.mixer.music.play()                    ##play do efeito sonoro
+                dino.is_Jumping = True                       ##variável que identifica é para entrar na função do pulo
 
-            if (event.key == pygame.K_DOWN):
-                dino.is_Down = True
+            if (event.key == pygame.K_DOWN):                 ##se o usuário clicar e permanecer clicada a tecla Pg.DOWN
+                dino.is_Down = True                          ##variável que identifica que o dino está agachado e muda algumas coisas no loop
 
-        if (event.type == pygame.KEYUP):
-            dino.is_Down = False
+        if (event.type == pygame.KEYUP):                     ##quando o usuário soltar a tecla Pg.DOWN
+            dino.is_Down = False                             ##a variável se tornará falsa e ele permanece levantado
 
     def on_render(self):
         pygame.display.update()
@@ -79,6 +81,7 @@ class App(object):   ##criando a classe principal do jogo
         pygame.quit()
 
     def on_loop(self, condition):
+        dino.is_Jumping = False
         while condition:
 
             for event in pygame.event.get():
@@ -92,51 +95,46 @@ class App(object):   ##criando a classe principal do jogo
                 cloud.cloud_pos_x -= cloud.cloud_vel
                 if cloud.cloud_pos_x < -100:
                     cloud.cloud_pos_x = random.randint(1500, 4000)
-                dino.drawDino(run[img][0])   
+                ground.draw_Ground()
+                # ground.ground_pos_x -= settings.speed
+                dino.drawDino(run[img][0])
                 dino.on_jump()
 
-                #dino.on_collision(run[img], self.randomic_choice)
-                
+                dino.on_collision(run[img], self.randomic_choice)
+
                 obstacle.drawObstacle(self.randomic_choice)
                 obstacle.obst_pos_x -= settings.speed
                 if (obstacle.obst_pos_x < (0 - obstacle.obst_dimensions[self.randomic_choice][0])):
                     obstacle.obst_pos_x = 900
                     self.randomic_choice = random.choice(['small', 'medium', 'large'])
-                
-                score = message_display("score: " + str(int(round(self.score))), 'assets/PressStart2P-Regular.ttf', 15, 4)
-                self.score = int(ceil(self.score))
+
+                score = message_display("score: " + str(int(round(self.score))), 'assets/PressStart2P-Regular.ttf', 15, 1.16, 11)
                 if (self.score % 100) == 0 and self.score != 0:
                     pygame.mixer.init()
                     pygame.mixer.music.load("assets/checkPoint.wav")
                     pygame.mixer.music.play()
-                self.score += settings.score_acceleration
-                # if self.score % 10 == 0:
-                #     settings.score_acceleration += 0.05
-                
+                self.score += 0.125
+
                 self.on_render()
-        
+
     def on_execute(self):
         self.on_init()
 
         menus.on_startMenu(menus.menu_isActive)
-        
+
         self.on_loop(self.is_Running)
-
-
-    # def print_score(self):
-    #     score = message_display("score: " + str(int(round(self.score))), 'agencyfb', 25, 4)
-    #     self.score += settings.score_acceleration
-    #     if self.score % 10 == 0:
-    #         settings.score_acceleration += 0.05
-
 
     def try_again(self):
         menus.__init__()
         obstacle.__init__()
+        ground.__init__()
+        cloud.__init__()
+        dino.__init__()
         self.score = 0
         menus.menu_isActive = False
         app.is_Running = True
         self.on_loop(self.is_Running)
+
 
 class Settings():
 
@@ -168,12 +166,11 @@ class Dino(object):
     def __init__(self):
         self.dino_images = {
             'main_image': [pygame.image.load("assets/dino.png"), (88, 94)],
-            # 'down_image': pygame.image.load("assets/dino_down_right.png"),
             'step_right': [pygame.image.load("assets/dino_up_right.png"), (88, 94)],
             'step_left': [pygame.image.load("assets/dino_up_left.png"), (88, 94)],
             'down_step_right': [pygame.image.load("assets/dino_down_right.png"), (118, 60)],
-            'down_step_left': [pygame.image.load("assets/dino_down_left.png"), (118, 60)]
-            # 'died': ["assets/dino_died.png", (00, 00)]
+            'down_step_left': [pygame.image.load("assets/dino_down_left.png"), (118, 60)],
+            'died': [pygame.image.load("assets/dino_died.png")]
         }
         self.dino_pos = self.dino_pos_x, self.dino_pos_y = [100, 150]
         self.is_Jumping = False
@@ -198,7 +195,7 @@ class Dino(object):
         if (self.is_Jumping):
             self.dino_pos_y -= dino.jump_speed
             self.jump_speed -= settings.acceleration
-      
+
         if (self.dino_pos_y == 150.0):
             self.is_Jumping = False
             self.jump_speed = 30
@@ -224,16 +221,19 @@ class Dino(object):
         return run
 
     def on_collision(self, img, random):
-        self.dino_dimensions = self.dino_width, self.dino_height = [img[1][0], img[1][1]]
+        dimensions = d_width, d_height = [img[1][0], img[1][1]]
         # if pygame.Rect.colliderect(dino.drawDino(img)):
-        if ((self.dino_pos_x + self.dino_width) == obstacle.obst_pos_x)\
-            and ((self.dino_pos_y + self.dino_height) >= obstacle.obst_pos_y)\
-            or ((self.dino_pos_y + self.dino_height) == obstacle.obst_pos_y) and\
-            (self.dino_pos_x + self.dino_width >= obstacle.obst_pos_x):
+        if ((self.dino_pos_x + d_width) == obstacle.obst_pos_x)\
+            and ((self.dino_pos_y + d_height) >= obstacle.obst_pos_y)\
+            or ((self.dino_pos_y + d_height) >= obstacle.obst_pos_y)\
+            and (self.dino_pos_x <= (obstacle.obst_pos_x + 10)  <= (self.dino_pos_x + d_width)):
+            pygame.mixer.init()
+            pygame.mixer.music.load("assets/die.wav")
+            pygame.mixer.music.play()
             app.is_Running = False
             menus.menu_isActive = True
             menus.on_gameoverMenu(menus.menu_isActive, random)
-        
+
 
 
 class Obstacle(object):
@@ -272,24 +272,25 @@ class Menus(object):
 
             app._display_surf.fill(settings.colors['black'])
             app._display_surf.blit(dino.dino_images['main_image'][0], (dino.dino_pos_x, dino.dino_pos_y))
-            
-            largeText = message_display(settings._game_name, 'assets/PressStart2P-Regular.ttf', 60, 2)
-            smallText = message_display('Press SPACE', 'assets/PressStart2P-Regular.ttf', 15, 1.4)
- 
+
+            largeText = message_display(settings._game_name, 'assets/PressStart2P-Regular.ttf', 60, 2, 2)
+            smallText = message_display('Press SPACE', 'assets/PressStart2P-Regular.ttf', 15, 2, 1.4)
+
             app.on_render()
 
-    
+
     def on_menuKeys(self, event):
         if (event.type == pygame.KEYDOWN):
             if (event.key == pygame.K_SPACE):
                 self.menu_isActive = False
                 app.is_Running = True
 
-    
+
     def on_gameoverMenu(self, condition, random):
-        message_display("GAME OVER", 'assets/PressStart2P-Regular.ttf', 60, 3)
-        final_score = message_display("score: " + str(int(round(app.score))), 'assets/PressStart2P-Regular.ttf', 15, 2)
+        message_display("GAME OVER", 'assets/PressStart2P-Regular.ttf', 60, 2, 3)
+        message_display("score: " + str(int(round(app.score))), 'assets/PressStart2P-Regular.ttf', 15, 2, 2)
         obstacle.drawObstacle(random)
+        app._display_surf.blit(dino.dino_images['died'][0], (dino.dino_pos_x, dino.dino_pos_y))
 
 
         while condition:
@@ -297,18 +298,25 @@ class Menus(object):
             for event in pygame.event.get():
                 if (event.type == pygame.QUIT):
                     app.on_cleanup()
-            
-            self.mouse_pos = pygame.mouse.get_pos()
-            self.mouse_isPressed = pygame.mouse.get_pressed()
-            position = ((settings.width / 2) - (72 / 2), (settings.height / 1.5) - (64 / 2))
-            app._display_surf.blit(pygame.image.load("assets/button_gameover.png"), position)
 
-            if ((position[0] + 72) > menus.mouse_pos[0] > position[0]) and\
-                ((position[1] + 64) > menus.mouse_pos[1] > position[1]) and\
-                menus.mouse_isPressed[0] == 1:
-                condition = True
-                app.try_again()
-            
+            buttons(
+                pygame.image.load("assets/button_gameover.png"),
+                72, 64, (settings.width / 2), (settings.height/1.4),
+                condition,
+                app.try_again
+            )
+
+            # self.mouse_pos = pygame.mouse.get_pos()
+            # self.mouse_isPressed = pygame.mouse.get_pressed()
+            # position = ((settings.width / 2) - (72 / 2), (settings.height / 1.5) - (64 / 2))
+            # app._display_surf.blit(pygame.image.load("assets/button_gameover.png"), position)
+
+            # if ((position[0] + 72) > menus.mouse_pos[0] > position[0]) and\
+            #     ((position[1] + 64) > menus.mouse_pos[1] > position[1]) and\
+            #     menus.mouse_isPressed[0] == 1:
+            #     condition = True
+            #     app.try_again()
+
             app.on_render()
 
 
@@ -324,9 +332,31 @@ class Cloud(object):
         self.cloud_image = pygame.image.load('assets/cloud.png')
         self.cloud_pos = self.cloud_pos_x, self.cloud_pos_y = [random.randint(1500, 4000), 100]
         self.cloud_vel = random.randint(1, 3)
-    
+
     def draw_Cloud(self):
         app._display_surf.blit(self.cloud_image, (self.cloud_pos_x, self.cloud_pos_y))
+
+
+class Ground(object):
+
+    def __init__(self):
+        self.ground_image = pygame.image.load('assets/ground.png')
+        self.ground_pos = self.ground_pos_x, self.ground_pos_y = [0, 234]
+        self.ground_dimensions = self.ground_width, self.ground_height = (2404, 27)
+        self.ground_list_pos = [
+            [0, self.ground_pos_y],
+            [0 + self.ground_width, self.ground_pos_y]
+        ]
+
+    def draw_Ground(self):
+        if self.ground_list_pos[0][0] + self.ground_width < -1:
+            del self.ground_list_pos[0]
+            self.ground_list_pos.append([-4 + self.ground_width, self.ground_pos_y])
+        app._display_surf.blit(self.ground_image, (self.ground_list_pos[0][0], self.ground_list_pos[0][1]))
+        app._display_surf.blit(self.ground_image, (self.ground_list_pos[1][0], self.ground_list_pos[1][1]))
+        self.ground_list_pos[0][0] -= settings.speed
+        self.ground_list_pos[1][0] -= settings.speed
+
 
 
 app = App()
@@ -336,6 +366,7 @@ obstacle = Obstacle()
 menus = Menus()
 texts = blockTexts()
 cloud = Cloud()
+ground = Ground()
 
 if __name__ == "__main__":
     app.on_execute()
