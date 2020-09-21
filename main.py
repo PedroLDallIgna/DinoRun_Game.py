@@ -46,7 +46,8 @@ class App(object):   ##criando a classe principal do jogo
             print("O módulo pygame não funcionou corretamente.")
         self._display_surf = pygame.display.set_mode(settings.size)     ##aqui define-se o tamanho da janela e a superfície
         self._title = pygame.display.set_caption(settings._game_name)   ##e aqui define-se o título da janela, sobrepondo o valor nulo
-        self.randomic_choice = [random.choice(obstacle.obstacle_keys) for key in range(3)]
+        # self.randomic_choice = random.choice(obstacle.obstacle_keys)
+        self.randomic_choice = 'ptera'
 
     def on_event(self, event):            ##função que capturará os inputs
         if (event.type == pygame.QUIT):   ##se o usuário clicar no X
@@ -96,26 +97,31 @@ class App(object):   ##criando a classe principal do jogo
                 cloud.cloud_pos_x -= cloud.cloud_vel
                 if cloud.cloud_pos_x < -100:
                     cloud.cloud_pos_x = random.randint(1500, 4000)
+                    cloud.cloud_vel = random.randint(1, 3)
                 ground.draw_Ground()
                 # ground.ground_pos_x -= settings.speed
                 dino.drawDino(run[img][0])
                 dino.on_jump()
 
-                dino.on_collision(run[img], self.randomic_choice[0])
+                dino.on_collision(run[img], self.randomic_choice, img)
 
-                obstacle.drawObstacle(self.randomic_choice)
-                for pos in obstacle.obstacle_list_pos:
-                    pos -= settings.speed
-                if (obstacle.obstacle_list_pos[0] < (0 - obstacle.obstacles_images[self.randomic_choice[0]][1][1])):
-                    del self.randomic_choice[0]
-                    self.randomic_choice.append(random.choice(obstacle.obstacle_keys))
+                obstacle.drawObstacle(self.randomic_choice, img)
+                obstacle.obst_pos_x -= settings.speed
+                if self.randomic_choice != 'ptera':
+                    if (obstacle.obst_pos_x + obstacle.obstacles_images[self.randomic_choice][1][1] <= 0):
+                        self.randomic_choice = random.choice(obstacle.obstacle_keys)
+                        obstacle.obst_pos_x = 1316
+                else: 
+                    if (obstacle.obst_pos_x + 100 <= 0):
+                        self.randomic_choice = random.choice(obstacle.obstacle_keys)
+                        obstacle.obst_pos_x = 1316
 
                 score = message_display("score: " + str(int(round(self.score))), 'assets/PressStart2P-Regular.ttf', 15, 1.16, 11)
                 if (self.score % 100) == 0 and self.score != 0:
                     pygame.mixer.init()
                     pygame.mixer.music.load("assets/checkPoint.wav")
                     pygame.mixer.music.play()
-                self.score += 0.125
+                self.score += 0.125/2
 
                 self.on_render()
 
@@ -132,7 +138,6 @@ class App(object):   ##criando a classe principal do jogo
         ground.__init__()
         cloud.__init__()
         dino.__init__()
-        ground.__init__()
         ground.ground_list_pos = [
             [0, ground.ground_pos_y],
             [ground.ground_width, ground.ground_pos_y]
@@ -147,7 +152,7 @@ class Settings():
 
     def __init__(self):
         self.size = self.width, self.height = (900, 270)
-        self._game_name = "Dino Run"
+        self._game_name = "T-Rex Run"
         self.FPS = 60
         self.clock = pygame.time.Clock()
         self.colors = {
@@ -158,7 +163,6 @@ class Settings():
         self.speed = 12
         self.gravity = 5
         self.acceleration = 2.5
-        self.score_acceleration = 0.0001
 
     def mixer_init(self):
         pygame.mixer.init()
@@ -182,6 +186,7 @@ class Dino(object):
         }
         self.dino_pos = self.dino_pos_x, self.dino_pos_y = [100, 150]
         self.is_Jumping = False
+        self.is_Died = False
         self.is_Down = False
         self.jump_speed = 30
         self.dino_dimensions = None
@@ -212,7 +217,8 @@ class Dino(object):
         return self.is_Jumping
 
     def on_movement(self, run):
-        #ptera_fly = ['ptera_up', 'ptera_up', 'ptera_up', 'ptera_up', 'ptera_up', 'ptera_down', 'ptera_down', 'ptera_down', 'ptera_down', 'ptera_down']
+        # [obstacle.ptera_fly.append(obstacle.ptera_images['ptera_up']) for i in range(5)]
+        # [obstacle.ptera_fly.append(obstacle.ptera_images['ptera_down']) for i in range(5)]
 
         if self.is_Down:
             [run.append(self.dino_images['down_step_right']) for i in range(5)]
@@ -228,20 +234,38 @@ class Dino(object):
 
         return run
 
-    def on_collision(self, img, random):
+    def on_collision(self, img, random, index):
         dimensions = d_width, d_height = [img[1][0], img[1][1]]
         # if pygame.Rect.colliderect(dino.drawDino(img)):
-        if ((self.dino_pos_x + d_width) == obstacle.obst_pos_x)\
-            and ((self.dino_pos_y + d_height) >= (244 - obstacle.obstacles_images[random][1][1]))\
-            or ((self.dino_pos_y + d_height) >= (244 - obstacle.obstacles_images[random][1][1]))\
-            and (self.dino_pos_x <= (obstacle.obst_pos_x + obstacle.obstacles_images[random][1][0])  <= (self.dino_pos_x + d_width)):
-            pygame.mixer.init()
-            pygame.mixer.music.load("assets/die.wav")
-            pygame.mixer.music.play()
-            app.is_Running = False
-            menus.menu_isActive = True
-            menus.on_gameoverMenu(menus.menu_isActive, random)
-
+        if random != 'ptera':
+            if ((self.dino_pos_x + d_width) == obstacle.obst_pos_x) and ((self.dino_pos_y + d_height) >= (244 - obstacle.obstacles_images[random][1][1]))\
+                or ((self.dino_pos_y + d_height) >= (244 - obstacle.obstacles_images[random][1][1])) and (self.dino_pos_x <= (obstacle.obst_pos_x + obstacle.obstacles_images[random][1][0]) <= (self.dino_pos_x + d_width)):
+                pygame.mixer.init()
+                pygame.mixer.music.load("assets/die.wav")
+                pygame.mixer.music.play()
+                app.is_Running = False
+                dino.is_Died = True
+                menus.menu_isActive = True
+                menus.on_gameoverMenu(menus.menu_isActive, random, img)
+        else:
+            if obstacle.ptera_fly[index] == "ptera_down":
+                if ((self.dino_pos_x + d_width) == obstacle.obst_pos_x) and (self.dino_pos_y <= (obstacle.ptera_pos_y + obstacle.ptera_images["ptera_down"][1][1])):
+                    pygame.mixer.init()
+                    pygame.mixer.music.load("assets/die.wav")
+                    pygame.mixer.music.play()
+                    app.is_Running = False
+                    dino.is_Died = True
+                    menus.menu_isActive = True
+                    menus.on_gameoverMenu(menus.menu_isActive, random, img)
+            else: 
+                if ((self.dino_pos_x + d_width) == obstacle.obst_pos_x) and (self.dino_pos_y <= (obstacle.ptera_pos_y + obstacle.ptera_images["ptera_up"][1][1])):
+                    pygame.mixer.init()
+                    pygame.mixer.music.load("assets/die.wav")
+                    pygame.mixer.music.play()
+                    app.is_Running = False
+                    dino.is_Died = True
+                    menus.menu_isActive = True
+                    menus.on_gameoverMenu(menus.menu_isActive, random, img)
 
 
 class Obstacle(object):
@@ -257,33 +281,47 @@ class Obstacle(object):
             'double_small_cactus(3)': [pygame.image.load("assets/double_small_cactus(3).png"), (68, 70)],
             'double_big_cactus(1)': [pygame.image.load("assets/double_big_cactus(1).png"), (98, 100)],
             'double_big_cactus(2)': [pygame.image.load("assets/double_big_cactus(2).png"), (100, 100)],
-            'triple_cactus': [pygame.image.load("assets/triple_cactus.png"), (103, 100)]
+            'triple_cactus': [pygame.image.load("assets/triple_cactus.png"), (103, 100)],
+            'ptera': []
         }
         self.obst_pos = self.obst_pos_x, self.obst_pos_y = [1316, 244]
-        self.obstacle_list_pos = [
-            1316,
-            1316 + 900,
-            1316 + 900 + 1100
-        ]
+        self.ptera_images = {
+            'ptera_up': [pygame.image.load("assets/ptera_up.png"), (92, 60)],
+            'ptera_down': [pygame.image.load("assets/ptera_down.png"), (92, 68)]
+        }
+        self.ptera_pos_y = 105
+        self.ptera_fly = ['ptera_up', 'ptera_up', 'ptera_up', 'ptera_up', 'ptera_up', 'ptera_up', 'ptera_down', 'ptera_down', 'ptera_down', 'ptera_down']
+        # for key in self.ptera_images.keys():
+        #     [self.ptera_fly.append(key) for index in range(5)]
+        # self.obstacle_list_pos = [
+        #     1316,
+        #     1316 + 900,
+        #     1316 + 900 + 1100,
+        #     1316 + 900 + 1100 + 850
+        # ]
         self.obstacle_keys = []
         for key in self.obstacles_images.keys():
             self.obstacle_keys.append(key)
-        self.obstacle_distance = random.randint(700, 1200)
+        # self.obstacle_distance = random.randint(700, 1200)
 
-    def drawObstacle(self, randomic_choice):
-        if (self.obstacle_list_pos[0] <= (0 + self.obstacles_images[randomic_choice[0]][1][0])):
-            del self.obstacle_list_pos[0]
-            self.obstacle_distance = random.randint(700, 1200)
-            self.obstacles_list_pos.append(self.obstacle_list_pos[-1] + self.obstacle_distance)
+    def drawObstacle(self, randomic_choice, img):
+        # if (self.obstacle_list_pos[0] + self.obstacles_images[randomic_choice[0]][1][0] <= -2):
+        #     del self.obstacle_list_pos[0]
+        #     self.obstacle_distance = random.randint(700, 1200)
+        #     self.obstacle_list_pos.append(self.obstacle_list_pos[-1] + self.obstacle_distance)
+        # else:
+        if randomic_choice == 'ptera':
+            if self.ptera_fly[img] == 'ptera_up':
+                app._display_surf.blit(self.ptera_images['ptera_up'][0], (self.obst_pos_x, self.ptera_pos_y))
+                # self.ptera_pos_x -= settings.speed
+            else:
+                app._display_surf.blit(self.ptera_images['ptera_down'][0], (self.obst_pos_x, self.ptera_pos_y + 10))
+                # self.obst_pos_x -= settings.speed
         else:
-            app._display_surf.blit(self.obstacles_images[randomic_choice[0]][0], (self.obstacle_list_pos[0], (244 - self.obstacles_images[randomic_choice][1][1])))
-            app._display_surf.blit(self.obstacles_images[randomic_choice[1]][0], (self.obstacle_list_pos[1], (244 - self.obstacles_images[randomic_choice][1][1])))
-            app._display_surf.blit(self.obstacles_images[randomic_choice[2]][0], (self.obstacle_list_pos[2], (244 - self.obstacles_images[randomic_choice][1][1])))
-        # pygame.draw.rect(
-        #     app._display_surf,\
-        #     settings.colors['green'],\
-        #     [self.obst_pos_x, self.obst_pos_y, self.obst_dimensions[randomic_choice][0], self.obst_dimensions[randomic_choice][1]]
-        #     )
+            app._display_surf.blit(self.obstacles_images[randomic_choice][0], (self.obst_pos_x, (244 - self.obstacles_images[randomic_choice][1][1])))
+            # app._display_surf.blit(self.obstacles_images[randomic_choice[1]][0], (self.obstacle_list_pos[1], (244 - self.obstacles_images[randomic_choice[1]][1][1])))
+            # app._display_surf.blit(self.obstacles_images[randomic_choice[2]][0], (self.obstacle_list_pos[2], (244 - self.obstacles_images[randomic_choice[2]][1][1])))
+            # app._display_surf.blit(self.obstacles_images[randomic_choice[3]][0], (self.obstacle_list_pos[3], (244 - self.obstacles_images[randomic_choice[3]][1][1])))
 
 
 class Menus(object):
@@ -318,10 +356,10 @@ class Menus(object):
                 app.is_Running = True
 
 
-    def on_gameoverMenu(self, condition, random):
+    def on_gameoverMenu(self, condition, random, img):
         message_display("GAME OVER", 'assets/PressStart2P-Regular.ttf', 60, 2, 3)
         message_display("score: " + str(int(round(app.score))), 'assets/PressStart2P-Regular.ttf', 15, 2, 2)
-        obstacle.drawObstacle(random)
+        obstacle.drawObstacle(random, img)
         app._display_surf.blit(dino.dino_images['died'][0], (dino.dino_pos_x, dino.dino_pos_y))
 
 
@@ -388,7 +426,6 @@ class Ground(object):
         app._display_surf.blit(self.ground_image, (self.ground_list_pos[1][0], self.ground_list_pos[1][1]))
         self.ground_list_pos[0][0] -= settings.speed
         self.ground_list_pos[1][0] -= settings.speed
-
 
 
 app = App()
